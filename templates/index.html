@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LangChain Project</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; background: #f9f9f9; }
+        .container { max-width: 600px; margin: auto; background: #fff; padding: 2em; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);}
+        h1 { color: #2d6cdf; }
+        form { margin-top: 1.5em; }
+        input[type="file"], input[type="text"], button {
+            display: block;
+            width: 100%;
+            margin-bottom: 1em;
+            padding: 0.5em;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .result { background: #e6f7ff; padding: 1em; border-radius: 4px; margin-top: 1em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LangChain PDF/Docx Loader</h1>
+        <form method="POST" enctype="multipart/form-data">
+            <label for="file">Upload PDF or DOCX:</label>
+            <input type="file" id="file" name="file" accept=".pdf,.docx" required>
+            <label for="query">Ask a question:</label>
+            <input type="text" id="query" name="query" placeholder="Type your question..." required>
+            <button type="submit">Submit</button>
+        </form>
+        {% if result %}
+        <div class="result">
+            <strong>Result:</strong>
+            <p>{{ result }}</p>
+        </div>
+        {% endif %}
+    </div>

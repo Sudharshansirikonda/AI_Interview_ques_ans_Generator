@@ -5,7 +5,7 @@ openai
 pypdf
 tiktoken
 aiofiles
-fastapi
+flask
 uvicorn
 jinja2
 python-multipart

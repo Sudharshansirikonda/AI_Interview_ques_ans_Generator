@@ -1,29 +1,31 @@
-from fastapi import FastAPI, Form,  Request, Response, File, Depends, status
-from fastapi.responses import RedirectResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from fastapi.encoders import jsonable_encoder
-import uvicorn
+from flask import Flask, request, render_template, send_file, redirect, url_for
 import os
-import aiofiles
-import json
 import csv
+from werkzeug.utils import secure_filename
 from src.helper import llm_pipeline
 
-app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+app = Flask(__name__)
+UPLOAD_FOLDER = 'uploaded_file.pdf'
+CSV_FOLDER = os.path.join('static', 'csv_files')
+os.makedirs(CSV_FOLDER, exist_ok=True)
 
-@app.get("/")
-async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+@app.route("/", methods=["GET"])
+def index():
+    return render_template("index.html")
 
-@app.post("/upload")
-async def chat(request: Request, file: bytes = File(...)):
-    file_path = "uploaded_file.pdf"
-    
-    async with aiofiles.open(file_path, 'wb') as out_file:
-        await out_file.write(file)
+@app.route("/upload", methods=["POST"])
+def upload_file():
+    if 'file' not in request.files:
+        return render_template("error.html", message="No file part in the request.")
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return render_template("error.html", message="No selected file.")
+
+    filename = secure_filename("uploaded_file.pdf")
+    file_path = os.path.join(".", filename)
+    file.save(file_path)
 
     try:
         result = llm_pipeline(file_path)
@@ -36,14 +38,12 @@ async def chat(request: Request, file: bytes = File(...)):
             "status": "error",
             "message": str(e)
         }
-    
-    return templates.TemplateResponse("result.html", {"request": request, "response_data": jsonable_encoder(response_data)})
+
+    return render_template("result.html", response_data=response_data)
 
 def get_csv(file_path):
     answer_generation_chain, ques_list = llm_pipeline(file_path)
-    base_folder = "static/csv_files"
-    os.makedirs(base_folder, exist_ok=True)
-    csv_file_path = os.path.join(base_folder, "output.csv")
+    csv_file_path = os.path.join(CSV_FOLDER, "output.csv")
     with open(csv_file_path, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Question", "Answer"])
@@ -52,20 +52,21 @@ def get_csv(file_path):
             writer.writerow([question, answer])
     return csv_file_path
 
-@app.get("/download_csv")
-async def download_csv(request: Request):
-    csv_file_path = get_csv("uploaded_file.pdf")
-    return templates.TemplateResponse("download.html", {"request": request, "csv_file_path": csv_file_path})
-@app.get("/download")
-async def download_file(request: Request):
-    csv_file_path = "static/csv_files/output.csv"
-    if os.path.exists(csv_file_path):
-        return templates.TemplateResponse("download.html", {"request": request, "csv_file_path": csv_file_path})
-    else:
-        return templates.TemplateResponse("error.html", {"request": request, "message": "File not found."})
-    
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
-    
+@app.route("/download_csv", methods=["GET"])
+def download_csv():
+    try:
+        csv_file_path = get_csv(UPLOAD_FOLDER)
+        return render_template("download.html", csv_file_path=csv_file_path)
+    except Exception as e:
+        return render_template("error.html", message=str(e))
 
-    
+@app.route("/download", methods=["GET"])
+def download_file():
+    csv_file_path = os.path.join(CSV_FOLDER, "output.csv")
+    if os.path.exists(csv_file_path):
+        return send_file(csv_file_path, as_attachment=True)
+    else:
+        return render_template("error.html", message="CSV file not found.")
+
+if __name__ == "__main__":
+    app.run(debug=True)

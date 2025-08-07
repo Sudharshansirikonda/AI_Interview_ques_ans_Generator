@@ -11,9 +11,17 @@ import os
 from dotenv import load_dotenv
 from src.prompt import *
 
-load_dotenv()
-OPENAI_API_KEY = os.getenv("sk-1234qrstuvwxabcd1234qrstuvwxabcd1234qrst")
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # Loads variables from .env into environment
+
+# Now access it securely
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
+# Use it with OpenAI
+import openai
+openai.api_key = openai_api_key
 
 def file_preocessing(file_path):
     loader = PyPDFLoader(file_path)
